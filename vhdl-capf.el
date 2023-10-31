@@ -1,4 +1,4 @@
-;;; vhdl-capf.el --- Completion at point function (capf) for vhdl-mode.
+;;; vhdl-capf.el --- Completion at point function (capf) for vhdl-mode.  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2015 sh-ow
 ;;
@@ -29,24 +29,29 @@
 
 ;;; Code:
 
+(eval-when-compile (require 'cl-lib))
+
 (defconst vhdl-capf-search-vhdl-buffers-for-candidates 3
   "If t, search in _all_ other vhdl-buffers for completions.
 When number, search in the last opened (number+1) vhdl-buffers.")
 
 (defvar vhdl-capf-completion-cache nil
-  "Cache for completion candidates per vhdl-buffer: alist with form (buffername . candidates).")
+  "Cache for completion candidates per vhdl-buffer: alist with
+form (buffername . candidates).")
 
-(defconst vhdl-capf-exclude-common-vhdl-syntax '("signal" "variable" "downto" "to" "if" "then"
-												  "begin" "end" "in" "out" "std_logic" "std_logic_vector")
-  "Some often occuring VHDL syntax constructs to exclude from the possible completions-list.")
+(defconst vhdl-capf-exclude-common-vhdl-syntax
+  '("signal" "variable" "downto" "to" "if" "then"
+    "begin" "end" "in" "out" "std_logic" "std_logic_vector")
+  "Some often occuring VHDL syntax constructs to exclude from the possible
+completions-list.")
 
 (defun vhdl-capf-flatten (l)
   "Convert a list of lists into a single list.
 Argument L is the list to be flattened."
   (when l
-    (if (atom (first l))
-		(cons (first l) (vhdl-capf-flatten (rest l)))
-      (append (vhdl-capf-flatten (first l)) (vhdl-capf-flatten (rest l))))))
+    (if (atom (cl-first l))
+		(cons (cl-first l) (vhdl-capf-flatten (cl-rest l)))
+      (append (vhdl-capf-flatten (cl-first l)) (vhdl-capf-flatten (cl-rest l))))))
 
 (defun vhdl-capf-get-vhdl-buffers (&optional nfirst)
   "Returns a list with all buffers that are in vhdl major mode.
@@ -69,18 +74,23 @@ Optional argument NFIRST is the amount of buffers to return."
 
 (defun vhdl-capf-get-vhdl-symbols (&optional limit buffer)
   "Get all vhdl symbols  of a certain BUFFER.
-Optional argument LIMIT specifies the point where search for symbols shall be stopped."
+Optional argument LIMIT specifies the point where search for symbols shall
+be stopped."
   (let ((complist ())
 		(regpat "\\<[A-Za-z]+\\(\\sw\\|\\s_\\)+")
-		(whichbuffer (if (eq buffer nil) (current-buffer) buffer))
-		(result ""))
+		(whichbuffer (if (eq buffer nil) (current-buffer) buffer)))
     (with-current-buffer whichbuffer
       (save-excursion
 		(goto-char (point-min))
 		(while (re-search-forward regpat limit t)
-		  (let ((result (buffer-substring-no-properties (match-beginning 0) (match-end 0))))
-			;; exclude: vhdl syntax-stuff, stuff that is in a comment, already captured stuff
-			(when (and (not (or (member result vhdl-capf-exclude-common-vhdl-syntax) (vhdl-capf-line-is-comment)))
+		  (let ((result (buffer-substring-no-properties
+                                 (match-beginning 0) (match-end 0))))
+			;; exclude: vhdl syntax-stuff, stuff that is in a
+			;; comment, already captured stuff
+			(when (and
+                               (not (or
+                                     (member result vhdl-capf-exclude-common-vhdl-syntax)
+                                     (vhdl-capf-line-is-comment)))
 					   (not (member result complist)))
 			  (push result complist))))))
     complist))
